@@ -5,9 +5,10 @@ class Menu2 {
     this.onMenuChange = onMenuChange;
     this.windowWidth = 300;
     this.windowHeight = 300;
-    this.windowCenterX = width / 2 - this.windowWidth / 2;
+    this.windowCenterX = 250;
     this.windowCenterY = height / 2 - this.windowHeight / 2 - 100;
     this.windowPos = [this.windowCenterX, this.windowCenterY];
+    this.windowTopLeft = [this.windowPos[0], this.windowPos[1]];
 
     this.partitionX = 100;
     this.partitionY = 100;
@@ -35,6 +36,9 @@ class Menu2 {
     this.isPlaying = false;
     this.isRunning = false;
 
+    this.thermostats = new Thermostats({
+      topY: this.windowTopLeft[1],
+    });
     this.TempPanelCenter();
     this.TempPanelOuter();
     this.ButtonPanel();
@@ -51,7 +55,7 @@ class Menu2 {
   display() {
     this.WindowPanel();
     this.timePanel.display(this);
-
+    this.thermostats.display();
     this.tempSliderCenter.display();
     this.tempSliderOuter.display();
 
@@ -234,6 +238,7 @@ class Menu2 {
       initial: 100,
       x: this.windowPos[0],
       y: this.windowPos[1] + this.windowHeight + 10,
+      vertical: true,
     });
     this.tempSliderCenter.create();
   }
