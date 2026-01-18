@@ -8,6 +8,7 @@ class PanelSlider {
         this.labelPos = [x, this.posY - 20];
         this.leftInfoPos = [this.posX, this.posY];
         this.size = props.windowWidth + 20;
+        this.slider = null;
     }
 
     create() {
@@ -22,15 +23,12 @@ class PanelSlider {
     }
 
     getValue() {
-        let value = this.slider.value();
-        return value;
+        return this.slider.value();
     }
 
     setValue(value) {
-        if (value >= 0 && value <= 100) { // memastikan nilai berada dalam rentang slider
+        if (value >= 0 && value <= 100) {
             this.slider.value(value);
-        } else {
-            console.warn("Value out of range. It should be between 0 and 100.");
         }
     }
 
@@ -52,5 +50,12 @@ class PanelSlider {
 
     getBottomLeft() {
         return this.leftInfoPos;
+    }
+
+    destroy() {
+        if (this.slider) {
+            this.slider.remove();
+            this.slider = null;
+        }
     }
 }
