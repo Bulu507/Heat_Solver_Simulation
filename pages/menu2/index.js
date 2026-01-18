@@ -9,6 +9,18 @@ class Menu2 {
     this.windowCenterY = height / 2 - this.windowHeight / 2 - 100;
     this.windowPos = [this.windowCenterX, this.windowCenterY];
     this.windowTopLeft = [this.windowPos[0], this.windowPos[1]];
+    this.windowTopRight = [
+      this.windowPos[0] + this.windowWidth,
+      this.windowPos[1],
+    ];
+    this.windowBottomLeft = [
+      this.windowPos[0],
+      this.windowPos[1] + this.windowHeight,
+    ];
+    this.windowBottomRight = [
+      this.windowPos[0] + this.windowWidth,
+      this.windowPos[1] + this.windowHeight,
+    ];
 
     this.partitionX = 100;
     this.partitionY = 100;
@@ -173,7 +185,7 @@ class Menu2 {
     const centerYStart = Math.floor(this.partitionY * 0.3);
     const centerYEnd = Math.floor(this.partitionY * 0.7);
 
-    console.log("CEK DIFF Before initialization", [val1, val2]);
+    // console.log("CEK DIFF Before initialization", [val1, val2]);
 
     for (let i = 0; i <= this.partitionX; i++) {
       for (let j = 0; j <= this.partitionY; j++) {
@@ -190,7 +202,7 @@ class Menu2 {
       }
     }
 
-    console.log("CEK DIFF After initialization", this.#diffAr);
+    // console.log("CEK DIFF After initialization", this.#diffAr);
   }
 
   heat2dExplicit(outerTemp) {
@@ -232,25 +244,27 @@ class Menu2 {
   }
 
   TempPanelCenter() {
-    this.tempSliderCenter = new PanelSlider({
+    let posX = this.windowTopLeft[0] - 40;
+    let posY = this.windowBottomLeft[1];
+    this.tempSliderCenter = new PanelSliderVertical({
       props: this,
-      label: "Suhu Titik Tengah",
+      x: posX,
+      y: posY,
       initial: 100,
-      x: this.windowPos[0],
-      y: this.windowPos[1] + this.windowHeight + 10,
-      vertical: true,
+      label: "Suhu Titik Tengah",
     });
     this.tempSliderCenter.create();
   }
 
   TempPanelOuter() {
-    let y = this.tempSliderCenter.getBottomLeft()[1];
-    this.tempSliderOuter = new PanelSlider({
+    let posX = this.windowTopRight[0] + 40;
+    let posY = this.windowBottomLeft[1];
+    this.tempSliderOuter = new PanelSliderVertical({
       props: this,
-      label: "Suhu Bagian Luar",
+      x: posX,
+      y: posY,
       initial: 0,
-      x: this.windowPos[0],
-      y: y,
+      label: "Suhu Bagian Luar",
     });
     this.tempSliderOuter.create();
   }
@@ -275,7 +289,7 @@ class Menu2 {
 
   ButtonPanel() {
     let posX = this.windowCenterX;
-    let posY = this.tempSliderOuter.getBottomLeft()[1] + 50;
+    let posY = this.windowBottomLeft[1] + 150;
 
     this.playButton = createButton("▶");
     this.playButton.position(posX, posY);
