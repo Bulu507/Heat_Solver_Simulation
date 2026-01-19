@@ -71,6 +71,8 @@ class Menu2 {
     this.ButtonPanel();
     this.TimePanel();
     this.ButtonBack();
+    this.MaterialPanelA();
+    this.MaterialPanelB();
 
     this.GetDiffusivityArray(0.1, 0.9);
   }
@@ -116,6 +118,8 @@ class Menu2 {
     this.thermostats.display();
     this.tempSliderCenter.display();
     this.tempSliderOuter.display();
+    this.materialMenuA.display();
+    this.materialMenuB.display();
 
     // this.drawTooltip();
   }
@@ -144,13 +148,27 @@ class Menu2 {
   drawProbeLine() {
     let y = this.windowTopLeft[1] + this.selectedYIndex * this.cellHeight;
 
-    stroke(255,255, 255);
+    stroke(255, 255, 255);
     strokeWeight(2);
-    line(this.windowTopLeft[0] +1, y, this.windowTopRight[0], y);
+    line(this.windowTopLeft[0] + 1, y, this.windowTopRight[0], y);
     noStroke();
     fill(0);
-    triangle(this.windowTopLeft[0], y, this.windowTopLeft[0] - 10, y - 5, this.windowTopLeft[0] - 10, y + 5);
-    triangle(this.windowTopRight[0], y, this.windowTopRight[0] + 10, y - 5, this.windowTopRight[0] + 10, y + 5);
+    triangle(
+      this.windowTopLeft[0],
+      y,
+      this.windowTopLeft[0] - 10,
+      y - 5,
+      this.windowTopLeft[0] - 10,
+      y + 5,
+    );
+    triangle(
+      this.windowTopRight[0],
+      y,
+      this.windowTopRight[0] + 10,
+      y - 5,
+      this.windowTopRight[0] + 10,
+      y + 5,
+    );
   }
 
   // ==================================================
@@ -426,34 +444,63 @@ class Menu2 {
   }
 
   handleMousePressed(mx, my) {
-        if (this.isRunning || this.isProbeLocked) return;
+    if (this.isRunning || this.isProbeLocked) return;
 
-        let lineY =
-            this.windowTopLeft[1] +
-            this.selectedYIndex * this.cellHeight;
+    let lineY = this.windowTopLeft[1] + this.selectedYIndex * this.cellHeight;
 
-        let tolerance = 6;
+    let tolerance = 6;
 
-        if (
-            mx >= this.windowTopLeft[0] &&
-            mx <= this.windowBottomRight[0] &&
-            Math.abs(my - lineY) <= tolerance
-        ) {
-            this.isDraggingProbe = true;
-        }
+    if (
+      mx >= this.windowTopLeft[0] &&
+      mx <= this.windowBottomRight[0] &&
+      Math.abs(my - lineY) <= tolerance
+    ) {
+      this.isDraggingProbe = true;
     }
+  }
 
-    handleMouseDragged(mx, my) {
-        if (!this.isDraggingProbe) return;
-        if (this.isRunning || this.isProbeLocked) return;
+  handleMouseDragged(mx, my) {
+    if (!this.isDraggingProbe) return;
+    if (this.isRunning || this.isProbeLocked) return;
 
-        let localY = my - this.windowTopLeft[1];
-        let j = Math.floor(localY / this.cellHeight);
+    let localY = my - this.windowTopLeft[1];
+    let j = Math.floor(localY / this.cellHeight);
 
-        this.selectedYIndex = constrain(j, 0, this.partitionY);
-    }
+    this.selectedYIndex = constrain(j, 0, this.partitionY);
+  }
 
-    handleMouseReleased() {
-        this.isDraggingProbe = false;
-    }
+  handleMouseReleased() {
+    this.isDraggingProbe = false;
+  }
+
+  MaterialPanelA() {
+    this.materialMenuA = new MaterialMenu({
+      props: this,
+      label: "A",
+      x: this.windowBottomLeft[0] - 30,
+      y: this.windowBottomLeft[1] + 30,
+    });
+    this.materialMenuA.create();
+  }
+
+  MaterialPanelA() {
+    this.materialMenuA = new MaterialMenu({
+      props: this,
+      label: "Luar",
+      x: this.windowBottomLeft[0] - 30,
+      y: this.windowBottomLeft[1] + 30,
+    });
+    this.materialMenuA.create();
+  }
+
+    MaterialPanelB() {
+    let posX = this.windowBottomRight[0] - 130;
+    this.materialMenuB = new MaterialMenu({
+      props: this,
+      label: "Tengah",
+      x: posX,
+      y: this.windowBottomLeft[1] + 30,
+    });
+    this.materialMenuB.create();
+  }
 }
