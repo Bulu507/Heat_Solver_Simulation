@@ -36,3 +36,24 @@ function changeMenu(menu) {
     currentMenu = new HomeMenu(changeMenu);
   }
 }
+
+/* ================= MOUSE EVENTS ================= */
+
+function mousePressed() {
+    if (currentMenu?.handleMousePressed) {
+        currentMenu.handleMousePressed(mouseX, mouseY);
+    }
+}
+
+function mouseDragged() {
+    if (currentMenu?.handleMouseDragged) {
+        currentMenu.handleMouseDragged(mouseX, mouseY);
+    }
+}
+
+function mouseReleased() {
+    if (currentMenu?.handleMouseReleased) {
+        currentMenu.handleMouseReleased();
+    }
+}
+

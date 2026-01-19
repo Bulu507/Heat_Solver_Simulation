@@ -3,10 +3,14 @@ class Menu2 {
 
   constructor(onMenuChange) {
     this.onMenuChange = onMenuChange;
+
+    // ===== WINDOW =====
     this.windowWidth = 300;
     this.windowHeight = 300;
+    this.windowSize = [this.windowWidth, this.windowHeight];
     this.windowCenterX = 250;
     this.windowCenterY = height / 2 - this.windowHeight / 2 - 100;
+
     this.windowPos = [this.windowCenterX, this.windowCenterY];
     this.windowTopLeft = [this.windowPos[0], this.windowPos[1]];
     this.windowTopRight = [
@@ -22,19 +26,27 @@ class Menu2 {
       this.windowPos[1] + this.windowHeight,
     ];
 
+    // ===== GRID =====
     this.partitionX = 100;
     this.partitionY = 100;
     this.cellWidth = this.windowWidth / this.partitionX;
     this.cellHeight = this.windowHeight / this.partitionY;
 
+    // ===== PROBE LINE (STEP 1) =====
+    this.selectedYIndex = Math.floor(this.partitionY / 2);
+    this.isProbeLocked = false;
+    this.isDraggingProbe = false;
+
+    // ===== PHYSICS =====
     this.lengthX = 1.0;
     this.lengthY = 1.0;
     this.deltaX = this.lengthX / this.partitionX;
     this.deltaY = this.lengthY / this.partitionY;
-    //this.alpha = 0.01;
     this.deltaT = 0.00001;
+
     this.Tkiri = 0;
     this.Tkanan = 100;
+
     this.Temp = Array.from({ length: this.partitionX + 1 }, () =>
       Array(this.partitionY + 1).fill(0),
     );
@@ -45,33 +57,32 @@ class Menu2 {
       Array(this.partitionY + 1).fill(0),
     );
 
+    // ===== STATE =====
     this.isPlaying = false;
     this.isRunning = false;
 
+    // ===== UI =====
     this.thermostats = new Thermostats({
       topY: this.windowTopLeft[1],
     });
+
     this.TempPanelCenter();
     this.TempPanelOuter();
     this.ButtonPanel();
     this.TimePanel();
     this.ButtonBack();
 
-    let centerX = Math.floor(this.partitionX / 2);
-    let centerY = Math.floor(this.partitionY / 2);
-    this.lastTemp[centerX][centerY] = 100;
-
     this.GetDiffusivityArray(0.1, 0.9);
   }
 
+  // ==================================================
+  // DISPLAY LOOP
+  // ==================================================
   display() {
+    // === BASE LAYER ===
     this.WindowPanel();
-    this.timePanel.display(this);
-    this.thermostats.display();
-    this.tempSliderCenter.display();
-    this.tempSliderOuter.display();
 
-    // ===== INITIAL STATE =====
+    // === SIMULATION ===
     if (!this.isRunning) {
       this.SetInitialTemp(
         this.tempSliderCenter.getValue(),
@@ -79,7 +90,6 @@ class Menu2 {
       );
     }
 
-    // ===== RUNNING (LOCK STATE) =====
     if (this.isRunning) {
       this.tempSliderCenter.disabled();
       this.tempSliderOuter.disabled();
@@ -88,30 +98,147 @@ class Menu2 {
       this.tempSliderOuter.enabled();
     }
 
-    // ===== PLAY =====
     if (this.isPlaying) {
-      // ====== UI =======
       this.playButton.attribute("disabled", "");
-      this.playButton.style("background-color", "#cccccc");
-      this.playButton.style("color", "#666666");
-
       this.pauseButton.removeAttribute("disabled");
-      this.pauseButton.style("background-color", "#ffc107");
-      this.pauseButton.style("color", "#ffffff");
-
       this.heat2dExplicit(this.tempSliderOuter.getValue());
     } else {
       this.playButton.removeAttribute("disabled");
-      this.playButton.style("background-color", "#4CAF50");
-      this.playButton.style("color", "#ffffff");
-
       this.pauseButton.attribute("disabled", "");
-      this.pauseButton.style("background-color", "#cccccc");
-      this.pauseButton.style("color", "#666666");
     }
 
-    // ===== DRAW =====
+    // === HEATMAP ===
     this.drawHeatMap();
+
+    // === UI OVERLAY (PALING AKHIR) ===
+    this.drawProbeLine();
+    this.timePanel.display(this);
+    this.thermostats.display();
+    this.tempSliderCenter.display();
+    this.tempSliderOuter.display();
+
+    // this.drawTooltip();
+  }
+
+  // ==================================================
+  // MOUSE HANDLER (STEP 2)
+  // ==================================================
+  handleMousePressed(mx, my) {
+    if (this.isRunning || this.isProbeLocked) return;
+
+    if (
+      mx >= this.windowTopLeft[0] &&
+      mx <= this.windowBottomRight[0] &&
+      my >= this.windowTopLeft[1] &&
+      my <= this.windowBottomRight[1]
+    ) {
+      let localY = my - this.windowTopLeft[1];
+      let j = Math.floor(localY / this.cellHeight);
+      this.selectedYIndex = constrain(j, 0, this.partitionY);
+    }
+  }
+
+  // ==================================================
+  // PROBE LINE DRAW (STEP 3)
+  // ==================================================
+  drawProbeLine() {
+    let y = this.windowTopLeft[1] + this.selectedYIndex * this.cellHeight;
+
+    stroke(255,255, 255);
+    strokeWeight(2);
+    line(this.windowTopLeft[0] +1, y, this.windowTopRight[0], y);
+    noStroke();
+    fill(0);
+    triangle(this.windowTopLeft[0], y, this.windowTopLeft[0] - 10, y - 5, this.windowTopLeft[0] - 10, y + 5);
+    triangle(this.windowTopRight[0], y, this.windowTopRight[0] + 10, y - 5, this.windowTopRight[0] + 10, y + 5);
+  }
+
+  // ==================================================
+  // DATA EXTRACTION (STEP 5)
+  // ==================================================
+  getHorizontalTemperatureProfile() {
+    let row = [];
+    for (let i = 0; i <= this.partitionX; i++) {
+      row.push(this.Temp[i][this.selectedYIndex]);
+    }
+    return row;
+  }
+
+  // ==================================================
+  // SOLVER (UNCHANGED)
+  // ==================================================
+  BoundaryCondition(outerTemp) {
+    for (let i = 0; i <= this.partitionX; i++) {
+      this.Temp[i][0] = outerTemp;
+      this.Temp[i][this.partitionY] = outerTemp;
+      this.lastTemp[i][0] = outerTemp;
+      this.lastTemp[i][this.partitionY] = outerTemp;
+    }
+    for (let j = 0; j <= this.partitionY; j++) {
+      this.Temp[0][j] = outerTemp;
+      this.Temp[this.partitionX][j] = outerTemp;
+      this.lastTemp[0][j] = outerTemp;
+      this.lastTemp[this.partitionX][j] = outerTemp;
+    }
+  }
+
+  SetInitialTemp(centerTemp, outerTemp) {
+    for (let i = 1; i < this.partitionX; i++) {
+      for (let j = 1; j < this.partitionY; j++) {
+        let isCenter =
+          i > this.partitionX * 0.3 &&
+          i < this.partitionX * 0.7 &&
+          j > this.partitionY * 0.3 &&
+          j < this.partitionY * 0.7;
+
+        let val = isCenter ? centerTemp : outerTemp;
+        this.Temp[i][j] = val;
+        this.lastTemp[i][j] = val;
+      }
+    }
+    this.BoundaryCondition(outerTemp);
+  }
+
+  GetDiffusivityArray(v1, v2) {
+    for (let i = 0; i <= this.partitionX; i++) {
+      for (let j = 0; j <= this.partitionY; j++) {
+        this.#diffAr[i][j] =
+          i > this.partitionX * 0.3 &&
+          i < this.partitionX * 0.7 &&
+          j > this.partitionY * 0.3 &&
+          j < this.partitionY * 0.7
+            ? v1
+            : v2;
+      }
+    }
+  }
+
+  heat2dExplicit(outerTemp) {
+    let ax = this.deltaT / (2 * this.deltaX ** 2);
+    let ay = this.deltaT / (2 * this.deltaY ** 2);
+
+    this.BoundaryCondition(outerTemp);
+
+    for (let i = 1; i < this.partitionX; i++) {
+      for (let j = 1; j < this.partitionY; j++) {
+        this.Temp[i][j] =
+          this.lastTemp[i][j] +
+          ax *
+            (this.lastTemp[i + 1][j] -
+              2 * this.lastTemp[i][j] +
+              this.lastTemp[i - 1][j]) +
+          ay *
+            (this.lastTemp[i][j + 1] -
+              2 * this.lastTemp[i][j] +
+              this.lastTemp[i][j - 1]);
+      }
+    }
+
+    for (let i = 0; i <= this.partitionX; i++) {
+      for (let j = 0; j <= this.partitionY; j++) {
+        this.lastTemp[i][j] = this.Temp[i][j];
+      }
+    }
   }
 
   drawHeatMap() {
@@ -126,6 +253,48 @@ class Menu2 {
     }
   }
 
+  drawTooltip() {
+    if (this.isRunning) return;
+
+    // Cek apakah mouse di dalam window
+    if (
+      mouseX < this.windowPos[0] ||
+      mouseX > this.windowPos[0] + this.windowSize[0] ||
+      mouseY < this.windowPos[1] ||
+      mouseY > this.windowPos[1] + this.windowSize[1]
+    )
+      return;
+
+    // === HITUNG INDEX GRID (PIXEL → CELL) ===
+    let i = Math.floor((mouseX - this.windowPos[0]) / this.cellWidth);
+    let j = Math.floor((mouseY - this.windowPos[1]) / this.cellHeight);
+
+    i = constrain(i, 0, this.partitionX);
+    j = constrain(j, 0, this.partitionY);
+
+    // === AMBIL DATA TERBARU ===
+    let temp = this.Temp[i][j];
+
+    // === TOOLTIP UI ===
+    let dialogW = 160;
+    let dialogH = 45;
+
+    let px = mouseX + 12;
+    let py = mouseY - dialogH - 12;
+
+    fill(255);
+    stroke(0);
+    strokeWeight(1);
+    rect(px, py, dialogW, dialogH, 6);
+
+    noStroke();
+    fill(0);
+    textSize(13);
+    textAlign(LEFT, TOP);
+    // text(`X : ${i}\nY : ${j}\nT : ${temp.toFixed(2)} °C`, px + 8, py + 6);
+    text(`Y : ${j}`, px + 8, py + 6);
+  }
+
   WindowPanel() {
     noStroke();
     for (let i = 0; i <= this.partitionX; i++) {
@@ -134,111 +303,6 @@ class Menu2 {
         let y = this.windowPos[1] + j * this.cellHeight;
         fill(this.TemptoColor(this.lastTemp[i][j]));
         rect(x, y, this.cellWidth, this.cellHeight);
-      }
-    }
-  }
-
-  BoundaryCondition(outerTemp) {
-    for (let i = 0; i <= this.partitionX; i++) {
-      this.lastTemp[i][0] = outerTemp;
-      this.lastTemp[i][this.partitionY] = outerTemp;
-      this.Temp[i][0] = outerTemp;
-      this.Temp[i][this.partitionY] = outerTemp;
-    }
-    for (let j = 0; j <= this.partitionY; j++) {
-      this.lastTemp[0][j] = outerTemp;
-      this.lastTemp[this.partitionX][j] = outerTemp;
-      this.Temp[0][j] = outerTemp;
-      this.Temp[this.partitionX][j] = outerTemp;
-    }
-  }
-
-  SetInitialTemp(centerTemp, outerTemp) {
-    const centerXStart = Math.floor(this.partitionX * 0.3);
-    const centerXEnd = Math.floor(this.partitionX * 0.7);
-    const centerYStart = Math.floor(this.partitionY * 0.3);
-    const centerYEnd = Math.floor(this.partitionY * 0.7);
-
-    for (let i = 1; i < this.partitionX; i++) {
-      for (let j = 1; j < this.partitionY; j++) {
-        if (
-          i >= centerXStart &&
-          i <= centerXEnd &&
-          j >= centerYStart &&
-          j <= centerYEnd
-        ) {
-          this.Temp[i][j] = centerTemp;
-          this.lastTemp[i][j] = centerTemp;
-        } else {
-          this.Temp[i][j] = outerTemp;
-          this.lastTemp[i][j] = outerTemp;
-        }
-      }
-    }
-
-    this.BoundaryCondition(outerTemp);
-  }
-
-  GetDiffusivityArray(val1, val2) {
-    const centerXStart = Math.floor(this.partitionX * 0.3);
-    const centerXEnd = Math.floor(this.partitionX * 0.7);
-    const centerYStart = Math.floor(this.partitionY * 0.3);
-    const centerYEnd = Math.floor(this.partitionY * 0.7);
-
-    // console.log("CEK DIFF Before initialization", [val1, val2]);
-
-    for (let i = 0; i <= this.partitionX; i++) {
-      for (let j = 0; j <= this.partitionY; j++) {
-        if (
-          i >= centerXStart &&
-          i <= centerXEnd &&
-          j >= centerYStart &&
-          j <= centerYEnd
-        ) {
-          this.#diffAr[i][j] = val1;
-        } else {
-          this.#diffAr[i][j] = val2;
-        }
-      }
-    }
-
-    // console.log("CEK DIFF After initialization", this.#diffAr);
-  }
-
-  heat2dExplicit(outerTemp) {
-    let alphaX = this.deltaT / (2 * this.deltaX ** 2);
-    let alphaY = this.deltaT / (2 * this.deltaY ** 2);
-
-    this.BoundaryCondition(outerTemp);
-
-    for (let i = 1; i < this.partitionX; i++) {
-      for (let j = 1; j < this.partitionY; j++) {
-        this.Temp[i][j] =
-          this.lastTemp[i][j] +
-          alphaX *
-            ((this.#diffAr[i + 1][j] + this.#diffAr[i][j]) *
-              this.lastTemp[i + 1][j] -
-              (this.#diffAr[i + 1][j] +
-                2 * this.#diffAr[i][j] +
-                this.#diffAr[i - 1][j]) *
-                this.lastTemp[i][j] +
-              (this.#diffAr[i][j] + this.#diffAr[i - 1][j]) *
-                this.lastTemp[i - 1][j]) +
-          alphaY *
-            ((this.#diffAr[i][j + 1] + this.#diffAr[i][j]) *
-              this.lastTemp[i][j + 1] -
-              (this.#diffAr[i][j + 1] +
-                2 * this.#diffAr[i][j] +
-                this.#diffAr[i][j - 1]) *
-                this.lastTemp[i][j] +
-              (this.#diffAr[i][j] + this.#diffAr[i][j - 1]) *
-                this.lastTemp[i][j - 1]);
-      }
-    }
-
-    for (let i = 0; i <= this.partitionX; i++) {
-      for (let j = 0; j <= this.partitionY; j++) {
-        this.lastTemp[i][j] = this.Temp[i][j];
       }
     }
   }
@@ -360,4 +424,36 @@ class Menu2 {
       dropdowns.forEach((dropdown) => dropdown.remove());
     });
   }
+
+  handleMousePressed(mx, my) {
+        if (this.isRunning || this.isProbeLocked) return;
+
+        let lineY =
+            this.windowTopLeft[1] +
+            this.selectedYIndex * this.cellHeight;
+
+        let tolerance = 6;
+
+        if (
+            mx >= this.windowTopLeft[0] &&
+            mx <= this.windowBottomRight[0] &&
+            Math.abs(my - lineY) <= tolerance
+        ) {
+            this.isDraggingProbe = true;
+        }
+    }
+
+    handleMouseDragged(mx, my) {
+        if (!this.isDraggingProbe) return;
+        if (this.isRunning || this.isProbeLocked) return;
+
+        let localY = my - this.windowTopLeft[1];
+        let j = Math.floor(localY / this.cellHeight);
+
+        this.selectedYIndex = constrain(j, 0, this.partitionY);
+    }
+
+    handleMouseReleased() {
+        this.isDraggingProbe = false;
+    }
 }
